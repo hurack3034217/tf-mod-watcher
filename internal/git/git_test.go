@@ -81,7 +81,13 @@ func setupTestRepo(t *testing.T) (string, *git.Repository, string, string) {
 
 func TestGetChangedFiles(t *testing.T) {
 	tmpDir, _, commit1, commit2 := setupTestRepo(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err := os.RemoveAll(tmpDir)
+		if err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+			return
+		}
+	}()
 
 	tests := []struct {
 		name          string
@@ -139,7 +145,14 @@ func TestGetChangedFiles(t *testing.T) {
 
 func TestResolveCommitHash(t *testing.T) {
 	tmpDir, repo, commit1, _ := setupTestRepo(t)
-	defer os.RemoveAll(tmpDir)
+
+	defer func() {
+		err := os.RemoveAll(tmpDir)
+		if err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+			return
+		}
+	}()
 
 	tests := []struct {
 		name        string
@@ -192,7 +205,13 @@ func TestResolveCommitHash(t *testing.T) {
 
 func TestGetChangedFilesBetweenCommits(t *testing.T) {
 	tmpDir, _, commit1, commit2 := setupTestRepo(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err := os.RemoveAll(tmpDir)
+		if err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+			return
+		}
+	}()
 
 	changedFiles, err := GetChangedFilesBetweenCommits(tmpDir, commit1, commit2)
 	if err != nil {
@@ -207,7 +226,13 @@ func TestGetChangedFilesBetweenCommits(t *testing.T) {
 
 func TestGetCommitForRef(t *testing.T) {
 	tmpDir, _, _, _ := setupTestRepo(t)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		err := os.RemoveAll(tmpDir)
+		if err != nil {
+			t.Logf("Failed to remove temp dir: %v", err)
+			return
+		}
+	}()
 
 	commit, err := GetCommitForRef(tmpDir, "HEAD")
 	if err != nil {
