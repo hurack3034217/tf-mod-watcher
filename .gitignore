@@ -32,6 +32,6 @@ go.work.sum
 .vscode/
 
 # binary
-go-mod-watcher
+tf-mod-watcher
 # Added by goreleaser init:
 dist/

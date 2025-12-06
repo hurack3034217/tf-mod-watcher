@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hurack/go-mod-watcher/internal/terraform"
+	"github.com/hurack/tf-mod-watcher/internal/terraform"
 )
 
 // Analyzer analyzes Terraform modules and determines which ones have been updated
