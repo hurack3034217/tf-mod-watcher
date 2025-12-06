@@ -12,6 +12,12 @@ Gitリポジトリ内の2つのコミット間で変更があったTerraformの�
 
 ## インストール
 
+### go installを使用
+
+```bash
+go install github.com/hurack3034217/tf-mod-watcher@latest
+```
+
 ### ビルド
 
 ```bash
@@ -32,7 +38,7 @@ go build -o tf-mod-watcher
 ```bash
 # 検索ディレクトリを指定(複数指定可能)
 # 指定されたディレクトリ配下のすべてのルートモジュールが自動的に検出されます
-./tf-mod-watcher \
+tf-mod-watcher \
   --root-module-dir terraform/environments
 ```
 
@@ -68,7 +74,7 @@ go build -o tf-mod-watcher
 ```bash
 # environments配下のすべてのルートモジュールを自動検出
 # base-pathを省略すると、Gitリポジトリのルートが自動的に使用されます
-./tf-mod-watcher \
+tf-mod-watcher \
   --root-module-dir terraform/environments
 ```
 
@@ -76,7 +82,7 @@ go build -o tf-mod-watcher
 
 ```bash
 # 複数のディレクトリを指定してルートモジュールを検索
-./tf-mod-watcher \
+tf-mod-watcher \
   --before-commit abc123 \
   --after-commit def456 \
   --root-module-dir terraform/environments \
@@ -87,7 +93,7 @@ go build -o tf-mod-watcher
 
 ```bash
 # 出力パスの基準を明示的に指定する場合
-./tf-mod-watcher \
+tf-mod-watcher \
   --root-module-dir terraform/environments \
   --base-path /path/to/repo
 ```
@@ -97,7 +103,7 @@ go build -o tf-mod-watcher
 ```bash
 # Git操作のルートパスと出力パスの基準を別々に指定する場合
 # （Gitリポジトリのルートとは異なるパスを基準に出力したい場合）
-./tf-mod-watcher \
+tf-mod-watcher \
   --root-module-dir terraform/environments \
   --git-repository-root-path /path/to/git/repo \
   --base-path /path/to/git/repo/terraform
@@ -107,7 +113,7 @@ go build -o tf-mod-watcher
 
 ```bash
 # デバッグモードで詳細なログを出力
-./tf-mod-watcher \
+tf-mod-watcher \
   --root-module-dir terraform/environments \
   --log-level debug
 ```
@@ -195,7 +201,7 @@ go test ./... -cover
 詳細なログを出力するには、`--log-level debug` を使用してください。
 
 ```bash
-./tf-mod-watcher \
+tf-mod-watcher \
   --root-module-dir environments/prod \
   --base-path /path/to/repo \
   --log-level debug 2> debug.log
