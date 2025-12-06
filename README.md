@@ -15,7 +15,7 @@ Gitリポジトリ内の2つのコミット間で変更があったTerraformの�
 ### ビルド
 
 ```bash
-go build -o tf-module-analyzer
+go build -o tf-mod-watcher
 ```
 
 ### 依存関係
@@ -32,7 +32,7 @@ go build -o tf-module-analyzer
 ```bash
 # 検索ディレクトリを指定(複数指定可能)
 # 指定されたディレクトリ配下のすべてのルートモジュールが自動的に検出されます
-./tf-module-analyzer \
+./tf-mod-watcher \
   --root-module-dir terraform/environments
 ```
 
@@ -68,7 +68,7 @@ go build -o tf-module-analyzer
 ```bash
 # environments配下のすべてのルートモジュールを自動検出
 # base-pathを省略すると、Gitリポジトリのルートが自動的に使用されます
-./tf-module-analyzer \
+./tf-mod-watcher \
   --root-module-dir terraform/environments
 ```
 
@@ -76,7 +76,7 @@ go build -o tf-module-analyzer
 
 ```bash
 # 複数のディレクトリを指定してルートモジュールを検索
-./tf-module-analyzer \
+./tf-mod-watcher \
   --before-commit abc123 \
   --after-commit def456 \
   --root-module-dir terraform/environments \
@@ -87,7 +87,7 @@ go build -o tf-module-analyzer
 
 ```bash
 # 出力パスの基準を明示的に指定する場合
-./tf-module-analyzer \
+./tf-mod-watcher \
   --root-module-dir terraform/environments \
   --base-path /path/to/repo
 ```
@@ -97,7 +97,7 @@ go build -o tf-module-analyzer
 ```bash
 # Git操作のルートパスと出力パスの基準を別々に指定する場合
 # （Gitリポジトリのルートとは異なるパスを基準に出力したい場合）
-./tf-module-analyzer \
+./tf-mod-watcher \
   --root-module-dir terraform/environments \
   --git-repository-root-path /path/to/git/repo \
   --base-path /path/to/git/repo/terraform
@@ -107,7 +107,7 @@ go build -o tf-module-analyzer
 
 ```bash
 # デバッグモードで詳細なログを出力
-./tf-module-analyzer \
+./tf-mod-watcher \
   --root-module-dir terraform/environments \
   --log-level debug
 ```
@@ -195,7 +195,7 @@ go test ./... -cover
 詳細なログを出力するには、`--log-level debug` を使用してください。
 
 ```bash
-./tf-module-analyzer \
+./tf-mod-watcher \
   --root-module-dir environments/prod \
   --base-path /path/to/repo \
   --log-level debug 2> debug.log
