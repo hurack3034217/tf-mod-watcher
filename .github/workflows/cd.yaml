@@ -29,7 +29,7 @@ jobs:
         run: |
           TODAY="$(TZ=Asia/Tokyo date +'%Y.%m.%d')"
           # git tag -l "パターン" --sort=-v:refname (v:refnameはバージョンソート)
-          LAST_TAG="$(git tag -l "${TODAY}.*" --sort=-v:refname | head -n 1)"
+          LAST_TAG="$(git tag -l "v${TODAY}.*" --sort=-v:refname | head -n 1)"
 
           if [ -z "$LAST_TAG" ]; then
             # 今日初めてのタグの場合
