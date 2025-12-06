@@ -3,8 +3,8 @@ description: CD pipeline for tf-mod-watcher
 
 on:
   push:
-    tags:
-      - 'v[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[1-9]' # matches calendar versioning tags like v2025.12.06.1
+    branches:
+      - main
 
 permissions: {}
   
@@ -23,6 +23,36 @@ jobs:
         uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version: '1.25'
+      
+      - name: Generate Tag from Today
+        id: generate-tag
+        run: |
+          TODAY="$(TZ=Asia/Tokyo date +'%Y.%m.%d')"
+          # git tag -l "パターン" --sort=-v:refname (v:refnameはバージョンソート)
+          LAST_TAG="$(git tag -l "${TODAY}.*" --sort=-v:refname | head -n 1)"
+
+          if [ -z "$LAST_TAG" ]; then
+            # 今日初めてのタグの場合
+            NEW_TAG="v${TODAY}.1"
+          else
+            # 既に今日のタグがある場合、末尾の数字を取り出してインクリメント
+            # ${LAST_TAG##*.} はシェルパラメータ展開で最後のドット以降の文字列を取得
+            LAST_NUM="${LAST_TAG##*.}"
+            NEXT_NUM="$((LAST_NUM + 1))"
+            NEW_TAG="v${TODAY}.${NEXT_NUM}"
+          fi
+
+          echo "tag=${NEW_TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create Git Tag
+        run: |
+          # github-actions[bot] の名前とメールアドレスを設定
+          # https://github.com/orgs/community/discussions/26560#discussioncomment-3252339
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag ${{ steps.generate-tag.outputs.tag }} || { echo "Failed to create tag ${{ steps.generate-tag.outputs.tag }}"; exit 1; }
+          git push origin ${{ steps.generate-tag.outputs.tag }} || { echo "Failed to push tag ${{ steps.generate-tag.outputs.tag }} to origin"; exit 1; }
 
       - name: GoReleaser Action
         uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6.4.0
