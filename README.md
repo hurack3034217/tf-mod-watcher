@@ -1,4 +1,4 @@
-# Terraform Module Analyzer
+# tf-mod-watcher
 
 Gitリポジトリ内の2つのコミット間で変更があったTerraformのルートモジュールを特定するCLIツール。
 子モジュールを再帰的に検索し、それらを参照しているルートモジュールを「変更あり」として検出します。
