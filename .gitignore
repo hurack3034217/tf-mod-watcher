@@ -33,3 +33,5 @@ go.work.sum
 
 # binary
 go-mod-watcher
+# Added by goreleaser init:
+dist/
