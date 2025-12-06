@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/hurack/go-mod-watcher/pkg/cli"
+	"github.com/hurack/tf-mod-watcher/pkg/cli"
 )
 
 func main() {

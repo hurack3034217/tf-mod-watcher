@@ -11,8 +11,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/urfave/cli/v3"
 
-	"github.com/hurack/go-mod-watcher/internal/analyzer"
-	gitpkg "github.com/hurack/go-mod-watcher/internal/git"
+	"github.com/hurack/tf-mod-watcher/internal/analyzer"
+	gitpkg "github.com/hurack/tf-mod-watcher/internal/git"
 )
 
 // NewApp creates and configures the CLI application

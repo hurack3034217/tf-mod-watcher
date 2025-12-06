@@ -1,4 +1,4 @@
-module github.com/hurack/go-mod-watcher
+module github.com/hurack/tf-mod-watcher
 
 go 1.25
 
