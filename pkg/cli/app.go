@@ -20,17 +20,33 @@ func NewApp() *cli.Command {
 	return &cli.Command{
 		Name:  "tf-module-analyzer",
 		Usage: "Analyzes updated Terraform root modules based on git diff",
+		MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
+			{
+				Required: true,
+				Flags: [][]cli.Flag{
+					{
+						&cli.StringFlag{
+							Name:  "before-commit",
+							Value: "HEAD^",
+							Usage: "Old commit hash or reference",
+						},
+						&cli.StringFlag{
+							Name:  "after-commit",
+							Value: "HEAD",
+							Usage: "New commit hash or reference",
+						},
+					},
+					{
+						&cli.StringSliceFlag{
+							Name:  "changed-file",
+							Usage: "List of changed file paths (can be specified multiple times)",
+						},
+					},
+				},
+			},
+		},
 		Flags: []cli.Flag{
-			&cli.StringFlag{
-				Name:  "before-commit",
-				Value: "HEAD^",
-				Usage: "Old commit hash or reference",
-			},
-			&cli.StringFlag{
-				Name:  "after-commit",
-				Value: "HEAD",
-				Usage: "New commit hash or reference",
-			},
+
 			&cli.StringSliceFlag{
 				Name:     "root-module-dir",
 				Usage:    "Paths to root module directories (can be specified multiple times)",
@@ -69,17 +85,7 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 	rootModuleDirs := cmd.StringSlice("root-module-dir")
 	gitRepoRootPath := cmd.String("git-repository-root-path")
 	basePath := cmd.String("base-path")
-
-	// If git-repository-root-path is not specified, find git repository root
-	if gitRepoRootPath == "" {
-		logger.Debug("git-repository-root-path not specified, searching for git repository root")
-		repoRoot, err := findGitRepositoryRoot()
-		if err != nil {
-			return fmt.Errorf("failed to find git repository root: %w (please specify --git-repository-root-path)", err)
-		}
-		gitRepoRootPath = repoRoot
-		logger.Info("Using auto-detected git repository root", "gitRepoRootPath", gitRepoRootPath)
-	}
+	changedFiles := cmd.StringSlice("changed-file")
 
 	// If base-path is not specified, use git-repository-root-path
 	if basePath == "" {
@@ -87,36 +93,37 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 		logger.Info("Using git-repository-root-path as base-path", "basePath", basePath)
 	}
 
-	logger.Info("Starting analysis",
-		"before", beforeCommit,
-		"after", afterCommit,
-		"gitRepoRootPath", gitRepoRootPath,
-		"basePath", basePath,
-		"rootModuleDirs", rootModuleDirs,
-	)
-
-	// Validate git-repository-root-path exists
-	if _, err := os.Stat(gitRepoRootPath); os.IsNotExist(err) {
-		return fmt.Errorf("git-repository-root-path does not exist: %s", gitRepoRootPath)
-	}
-
 	// Validate base-path exists
 	if _, err := os.Stat(basePath); os.IsNotExist(err) {
 		return fmt.Errorf("base-path does not exist: %s", basePath)
 	}
 
-	// Get changed files from git
-	logger.Info("Getting changed files from git")
-	changedFiles, err := gitpkg.GetChangedFiles(gitRepoRootPath, beforeCommit, afterCommit)
-	if err != nil {
-		return fmt.Errorf("failed to get changed files: %w", err)
+	var changedFilesMap map[string]struct{}
+
+	if len(changedFiles) > 0 {
+		// Use provided changed files
+		logger.Info("Using provided changed files", "count", len(changedFiles))
+		changedFilesMap = make(map[string]struct{})
+		for _, filePath := range changedFiles {
+			absPath, err := filepath.Abs(filePath)
+			if err != nil {
+				return fmt.Errorf("failed to get absolute path for changed file %s: %w", filePath, err)
+			}
+			changedFilesMap[absPath] = struct{}{}
+		}
+	} else {
+		// Search for changed files using git
+		var err error
+		changedFilesMap, err = searchChangedFiles(gitRepoRootPath, beforeCommit, afterCommit, logger)
+		if err != nil {
+			return fmt.Errorf("failed to search for changed files: %w", err)
+		}
 	}
 
-	logger.Info("Found changed files", "count", len(changedFiles))
-	logger.Debug("Changed files", "files", changedFiles)
+	logger.Info("Found changed files", "count", len(changedFilesMap))
+	logger.Debug("Changed files", "files", changedFilesMap)
 
 	// changedFiles already contains absolute paths from GetChangedFiles
-
 	// Find all root modules in the specified directories
 	logger.Info("Searching for root modules in specified directories")
 	foundRootModuleDirs := make([]string, 0)
@@ -136,11 +143,20 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 		}
 	}
 
+	logger.Info("Starting analysis",
+		"before", beforeCommit,
+		"after", afterCommit,
+		"gitRepoRootPath", gitRepoRootPath,
+		"basePath", basePath,
+		"rootModuleDirs", rootModuleDirs,
+		"changedFiles", changedFilesMap,
+	)
+
 	// Analyze root modules
 	logger.Info("Analyzing root modules")
 	updatedModules, err := analyzer.AnalyzeRootModules(
 		foundRootModuleDirs,
-		changedFiles,
+		changedFilesMap,
 		basePath,
 		logger,
 	)
@@ -159,6 +175,32 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 	fmt.Println(string(output))
 
 	return nil
+}
+
+func searchChangedFiles(gitRepoRootPath, beforeCommit, afterCommit string, logger *slog.Logger) (map[string]struct{}, error) {
+	// If git-repository-root-path is not specified, find git repository root
+	if gitRepoRootPath == "" {
+		logger.Debug("git-repository-root-path not specified, searching for git repository root")
+		repoRoot, err := findGitRepositoryRoot()
+		if err != nil {
+			return nil, fmt.Errorf("failed to find git repository root: %w (please specify --git-repository-root-path)", err)
+		}
+		gitRepoRootPath = repoRoot
+		logger.Info("Using auto-detected git repository root", "gitRepoRootPath", gitRepoRootPath)
+	}
+
+	// Validate git-repository-root-path exists
+	if _, err := os.Stat(gitRepoRootPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("git-repository-root-path does not exist: %s", gitRepoRootPath)
+	}
+
+	// Get changed files from git
+	logger.Info("Getting changed files from git")
+	changedFiles, err := gitpkg.GetChangedFiles(gitRepoRootPath, beforeCommit, afterCommit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get changed files: %w", err)
+	}
+	return changedFiles, nil
 }
 
 // parseLogLevel parses the log level string and returns the corresponding slog.Level

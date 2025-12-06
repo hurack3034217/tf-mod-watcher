@@ -64,11 +64,10 @@ func TestNewApp(t *testing.T) {
 
 	// Check that required flags are present
 	flagNames := map[string]bool{
-		"before-commit":   false,
-		"after-commit":    false,
-		"root-module-dir": false,
-		"base-path":       false,
-		"log-level":       false,
+		"root-module-dir":          false,
+		"git-repository-root-path": false,
+		"base-path":                false,
+		"log-level":                false,
 	}
 
 	for _, flag := range app.Flags {
@@ -88,6 +87,42 @@ func TestNewApp(t *testing.T) {
 	for name, found := range flagNames {
 		if !found {
 			t.Errorf("Expected flag '%s' to be defined", name)
+		}
+	}
+
+	exclusiveFlagGroups := []map[string]bool{
+		{
+			"before-commit": false,
+			"after-commit":  false,
+		},
+		{
+			"changed-file": false,
+		},
+	}
+
+	for _, group := range app.MutuallyExclusiveFlags {
+		for i, flag := range group.Flags {
+			for _, f := range flag {
+				var flagName string
+				switch fl := f.(type) {
+				case *cli.StringFlag:
+					flagName = fl.Name
+				case *cli.StringSliceFlag:
+					flagName = fl.Name
+				}
+
+				if _, exists := exclusiveFlagGroups[i][flagName]; exists {
+					exclusiveFlagGroups[i][flagName] = true
+				}
+			}
+		}
+	}
+
+	for i, group := range exclusiveFlagGroups {
+		for name, found := range group {
+			if !found {
+				t.Errorf("Expected mutually exclusive flag '%s' in group %d to be defined", name, i)
+			}
 		}
 	}
 
