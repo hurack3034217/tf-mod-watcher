@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -16,13 +17,13 @@ import (
 )
 
 // NewApp creates and configures the CLI application
-func NewApp() *cli.Command {
+func NewApp(writer io.Writer) *cli.Command {
 	return &cli.Command{
 		Name:  "tf-module-analyzer",
 		Usage: "Analyzes updated Terraform root modules based on git diff",
 		MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
 			{
-				Required: true,
+				Required: false,
 				Flags: [][]cli.Flag{
 					{
 						&cli.StringFlag{
@@ -65,12 +66,14 @@ func NewApp() *cli.Command {
 				Usage: "Log level (debug, info, warn, error)",
 			},
 		},
-		Action: runAnalysis,
+		Action: func(ctx context.Context, cmd *cli.Command) error {
+			return runAnalysis(ctx, cmd, writer)
+		},
 	}
 }
 
 // runAnalysis is the main action that executes the analysis
-func runAnalysis(ctx context.Context, cmd *cli.Command) error {
+func runAnalysis(ctx context.Context, cmd *cli.Command, writer io.Writer) error {
 	// Setup logger
 	logLevel := parseLogLevel(cmd.String("log-level"))
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
@@ -109,6 +112,16 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 			logger.Info("Using current working directory as base-path", "basePath", basePath)
 		}
 	} else {
+		// If git-repository-root-path is not specified, find git repository root
+		if gitRepoRootPath == "" {
+			logger.Debug("git-repository-root-path not specified, searching for git repository root")
+			repoRoot, err := findGitRepositoryRoot()
+			if err != nil {
+				return fmt.Errorf("failed to find git repository root: %w (please specify --git-repository-root-path)", err)
+			}
+			gitRepoRootPath = repoRoot
+			logger.Info("Using auto-detected git repository root", "gitRepoRootPath", gitRepoRootPath)
+		}
 		// Search for changed files using git
 		var err error
 		changedFilesMap, err = searchChangedFiles(gitRepoRootPath, beforeCommit, afterCommit, logger)
@@ -179,23 +192,15 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 		return fmt.Errorf("failed to marshal output: %w", err)
 	}
 
-	fmt.Println(string(output))
+	_, err = writer.Write(output)
+	if err != nil {
+		return fmt.Errorf("failed to write output: %w", err)
+	}
 
 	return nil
 }
 
 func searchChangedFiles(gitRepoRootPath, beforeCommit, afterCommit string, logger *slog.Logger) (map[string]struct{}, error) {
-	// If git-repository-root-path is not specified, find git repository root
-	if gitRepoRootPath == "" {
-		logger.Debug("git-repository-root-path not specified, searching for git repository root")
-		repoRoot, err := findGitRepositoryRoot()
-		if err != nil {
-			return nil, fmt.Errorf("failed to find git repository root: %w (please specify --git-repository-root-path)", err)
-		}
-		gitRepoRootPath = repoRoot
-		logger.Info("Using auto-detected git repository root", "gitRepoRootPath", gitRepoRootPath)
-	}
-
 	// Validate git-repository-root-path exists
 	if _, err := os.Stat(gitRepoRootPath); os.IsNotExist(err) {
 		return nil, fmt.Errorf("git-repository-root-path does not exist: %s", gitRepoRootPath)

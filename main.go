@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	if err := cli.NewApp().Run(context.Background(), os.Args); err != nil {
+	if err := cli.NewApp(os.Stdout).Run(context.Background(), os.Args); err != nil {
 		slog.Error("CLI execution failed", "error", err)
 		os.Exit(1)
 	}

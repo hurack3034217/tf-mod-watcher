@@ -1,8 +1,13 @@
 package cli
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
 	"log/slog"
 	"os"
+	"slices"
 	"testing"
 
 	"github.com/urfave/cli/v3"
@@ -52,7 +57,7 @@ func TestParseLogLevel(t *testing.T) {
 }
 
 func TestNewApp(t *testing.T) {
-	app := NewApp()
+	app := NewApp(io.Discard)
 
 	if app == nil {
 		t.Fatal("NewApp() returned nil")
@@ -133,7 +138,7 @@ func TestNewApp(t *testing.T) {
 }
 
 func TestNewApp_DefaultValues(t *testing.T) {
-	app := NewApp()
+	app := NewApp(io.Discard)
 
 	// Check default values
 	for _, flag := range app.Flags {
@@ -153,7 +158,7 @@ func TestNewApp_DefaultValues(t *testing.T) {
 }
 
 func TestNewApp_RequiredFlags(t *testing.T) {
-	app := NewApp()
+	app := NewApp(io.Discard)
 
 	requiredFlags := []string{"root-module-dir"}
 
@@ -286,4 +291,93 @@ func getTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelError, // Only show errors during tests
 	}))
+}
+
+func TestRunAnalysis(t *testing.T) {
+	tests := []struct {
+		name            string
+		args            []string
+		expectedModules []string
+		expectedError   bool
+	}{
+		{
+			name: "Run analysis on mock-terraform environment",
+			args: []string{
+				"--root-module-dir", "../../mock-terraform/environments",
+				"--changed-file", "../../mock-terraform/modules/common/common-1/main.tf",
+			},
+			expectedModules: []string{
+				"../../mock-terraform/environments/organization-1/common/dev",
+				"../../mock-terraform/environments/organization-1/common/prod",
+				"../../mock-terraform/environments/organization-2/common/dev",
+				"../../mock-terraform/environments/organization-2/common/prod",
+				"../../mock-terraform/environments/usecases-1/common/dev",
+			},
+			expectedError: false,
+		},
+		{
+			name: "Specified base-path",
+			args: []string{
+				"--root-module-dir", "../../mock-terraform/environments",
+				"--base-path", "../../mock-terraform",
+				"--changed-file", "../../mock-terraform/modules/common/common-1/main.tf",
+			},
+			expectedModules: []string{
+				"environments/organization-1/common/dev",
+				"environments/organization-1/common/prod",
+				"environments/organization-2/common/dev",
+				"environments/organization-2/common/prod",
+				"environments/usecases-1/common/dev",
+			},
+			expectedError: false,
+		},
+		{
+			name: "No changed files",
+			args: []string{
+				"--root-module-dir", "../../mock-terraform/environments",
+				"--changed-file", "",
+			},
+			expectedModules: []string{},
+			expectedError:   false,
+		},
+		{
+			name: "Specified conflicting flags",
+			args: []string{
+				"--root-module-dir", "../../mock-terraform/environments",
+				"--before-commit", "HEAD^",
+				"--after-commit", "HEAD",
+				"--changed-file", "../../mock-terraform/modules/common/common-1/main.tf",
+			},
+			expectedModules: nil,
+			expectedError:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var buf bytes.Buffer
+			err := NewApp(&buf).Run(context.Background(), append([]string{os.Args[0]}, tt.args...))
+			if tt.expectedError {
+				if err == nil {
+					t.Fatalf("Expected error: %v, got: %v", tt.expectedError, err)
+				} else {
+					t.Logf("Expected error occurred: %v", err)
+					return
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("NewApp().Run() failed: %v", err)
+				}
+			}
+
+			output := buf.String()
+			slices.Sort(tt.expectedModules)
+			expectedOutput, err := json.Marshal(tt.expectedModules)
+			if err != nil {
+				t.Fatalf("json.Marshal failed: %v", err)
+			}
+			if output != string(expectedOutput) {
+				t.Errorf("Expected output %s, got %s", string(expectedOutput), output)
+			}
+		})
+	}
 }
