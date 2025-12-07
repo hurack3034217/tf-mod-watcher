@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/hurack3034217/tf-mod-watcher/internal/terraform"
@@ -252,6 +253,8 @@ func AnalyzeRootModules(rootModuleDirs []string, changedFiles map[string]struct{
 			updatedModules = append(updatedModules, relPath)
 		}
 	}
+
+	slices.Sort(updatedModules)
 
 	return updatedModules, nil
 }
