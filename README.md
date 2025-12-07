@@ -46,12 +46,18 @@ tf-mod-watcher \
 
 | オプション | 必須/任意 | デフォルト | 説明 |
 |-----------|----------|-----------|------|
-| `--before-commit` | 任意 | `HEAD^` | 比較対象の古いコミットハッシュまたは参照 |
-| `--after-commit` | 任意 | `HEAD` | 比較対象の新しいコミットハッシュまたは参照 |
+| `--before-commit` | 任意 | `HEAD^` | 比較対象の古いコミットハッシュまたは参照<br>※`--changed-file`と同時指定不可 |
+| `--after-commit` | 任意 | `HEAD` | 比較対象の新しいコミットハッシュまたは参照<br>※`--changed-file`と同時指定不可 |
+| `--git-repository-root-path` | 任意 | 自動検出されたGitリポジトリルート | Git操作に使用するGitリポジトリのルートパス<br>※`--changed-file`と同時指定不可 |
+| `--changed-file` | 任意 | なし | 変更ファイルのパスを直接指定（複数指定可）。<br>このフラグを指定した場合、`--before-commit`/`--after-commit`/`--git-repository-root-path`は同時指定できません。<br>また、`--base-path`を省略した場合はカレントディレクトリが基準パスとして使用されます。|
 | `--root-module-dir` | 必須 | なし | ルートモジュールを検索するディレクトリ（カレントディレクトリからの相対パスまたは絶対パス、複数指定可）。指定されたディレクトリ配下のすべてのサブディレクトリから.tfファイルを含むディレクトリを再帰的に検索します。 |
-| `--git-repository-root-path` | 任意 | 自動検出されたGitリポジトリルート | Git操作に使用するGitリポジトリのルートパス |
-| `--base-path` | 任意 | `--git-repository-root-path`と同じ | 出力パスの相対パス計算の基準パス |
+| `--base-path` | 任意 | `--git-repository-root-path`と同じ（`--changed-file`指定時はカレントディレクトリ） | 出力パスの相対パス計算の基準パス |
 | `--log-level` | 任意 | `info` | ログレベル（`debug`, `info`, `warn`, `error`） |
+
+#### オプションの排他性
+
+- `--changed-file`を指定した場合、`--before-commit`、`--after-commit`、`--git-repository-root-path`は同時に指定できません。
+- `--changed-file`を指定した場合、`--base-path`を省略するとカレントディレクトリが基準パスとして使用されます。
 
 ### 出力形式
 
@@ -116,6 +122,16 @@ tf-mod-watcher \
 tf-mod-watcher \
   --root-module-dir terraform/environments \
   --log-level debug
+```
+
+#### 例6: 変更ファイルを直接指定して比較
+
+```bash
+# 変更ファイルを明示的に指定し、base-pathを省略した場合はカレントディレクトリが基準となる
+./tf-mod-watcher \
+  --changed-file environments/prod/main.tf \
+  --changed-file environments/prod/variables.tf \
+  --root-module-dir terraform/environments
 ```
 
 ## アーキテクチャ
