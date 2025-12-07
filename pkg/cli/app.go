@@ -86,11 +86,6 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 	basePath := cmd.String("base-path")
 	changedFiles := cmd.StringSlice("changed-file")
 
-	// Validate base-path exists
-	if _, err := os.Stat(basePath); os.IsNotExist(err) {
-		return fmt.Errorf("base-path does not exist: %s", basePath)
-	}
-
 	var changedFilesMap map[string]struct{}
 
 	if len(changedFiles) > 0 {
@@ -125,6 +120,11 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 			basePath = gitRepoRootPath
 			logger.Info("Using git-repository-root-path as base-path", "basePath", basePath)
 		}
+	}
+
+	// Validate base-path exists
+	if _, err := os.Stat(basePath); os.IsNotExist(err) {
+		return fmt.Errorf("base-path does not exist: %s", basePath)
 	}
 
 	logger.Info("Found changed files", "count", len(changedFilesMap))
