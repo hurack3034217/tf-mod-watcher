@@ -335,6 +335,7 @@ func TestRunAnalysis(t *testing.T) {
 			name: "No changed files",
 			args: []string{
 				"--root-module-dir", "../../mock-terraform/environments",
+				"--changed-file", "",
 			},
 			expectedModules: []string{},
 			expectedError:   false,
