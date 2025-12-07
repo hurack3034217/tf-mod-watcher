@@ -128,7 +128,7 @@ tf-mod-watcher \
 
 ```bash
 # 変更ファイルを明示的に指定し、base-pathを省略した場合はカレントディレクトリが基準となる
-./tf-mod-watcher \
+tf-mod-watcher \
   --changed-file environments/prod/main.tf \
   --changed-file environments/prod/variables.tf \
   --root-module-dir terraform/environments
