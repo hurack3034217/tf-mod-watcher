@@ -64,10 +64,9 @@ func TestNewApp(t *testing.T) {
 
 	// Check that required flags are present
 	flagNames := map[string]bool{
-		"root-module-dir":          false,
-		"git-repository-root-path": false,
-		"base-path":                false,
-		"log-level":                false,
+		"root-module-dir": false,
+		"base-path":       false,
+		"log-level":       false,
 	}
 
 	for _, flag := range app.Flags {
@@ -92,8 +91,9 @@ func TestNewApp(t *testing.T) {
 
 	exclusiveFlagGroups := []map[string]bool{
 		{
-			"before-commit": false,
-			"after-commit":  false,
+			"before-commit":            false,
+			"after-commit":             false,
+			"git-repository-root-path": false,
 		},
 		{
 			"changed-file": false,

@@ -35,6 +35,10 @@ func NewApp() *cli.Command {
 							Value: "HEAD",
 							Usage: "New commit hash or reference",
 						},
+						&cli.StringFlag{
+							Name:  "git-repository-root-path",
+							Usage: "Git repository root path for git operations (default: auto-detected git repository root)",
+						},
 					},
 					{
 						&cli.StringSliceFlag{
@@ -46,15 +50,10 @@ func NewApp() *cli.Command {
 			},
 		},
 		Flags: []cli.Flag{
-
 			&cli.StringSliceFlag{
 				Name:     "root-module-dir",
 				Usage:    "Paths to root module directories (can be specified multiple times)",
 				Required: true,
-			},
-			&cli.StringFlag{
-				Name:  "git-repository-root-path",
-				Usage: "Git repository root path for git operations (default: auto-detected git repository root)",
 			},
 			&cli.StringFlag{
 				Name:  "base-path",
@@ -87,12 +86,6 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 	basePath := cmd.String("base-path")
 	changedFiles := cmd.StringSlice("changed-file")
 
-	// If base-path is not specified, use git-repository-root-path
-	if basePath == "" {
-		basePath = gitRepoRootPath
-		logger.Info("Using git-repository-root-path as base-path", "basePath", basePath)
-	}
-
 	// Validate base-path exists
 	if _, err := os.Stat(basePath); os.IsNotExist(err) {
 		return fmt.Errorf("base-path does not exist: %s", basePath)
@@ -111,12 +104,26 @@ func runAnalysis(ctx context.Context, cmd *cli.Command) error {
 			}
 			changedFilesMap[absPath] = struct{}{}
 		}
+		if basePath == "" {
+			// If base-path is still not set, use current working directory
+			currentDir, err := os.Getwd()
+			if err != nil {
+				return fmt.Errorf("failed to get current working directory: %w", err)
+			}
+			basePath = currentDir
+			logger.Info("Using current working directory as base-path", "basePath", basePath)
+		}
 	} else {
 		// Search for changed files using git
 		var err error
 		changedFilesMap, err = searchChangedFiles(gitRepoRootPath, beforeCommit, afterCommit, logger)
 		if err != nil {
 			return fmt.Errorf("failed to search for changed files: %w", err)
+		}
+		// If base-path is not specified, use git-repository-root-path
+		if basePath == "" {
+			basePath = gitRepoRootPath
+			logger.Info("Using git-repository-root-path as base-path", "basePath", basePath)
 		}
 	}
 
